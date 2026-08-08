@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.module.content.mapper.ContentMapper">
+
+    <!-- 自定义SQL映射（分页查询示例） -->
+    <select id="selectPageWithExtras" resultType="com.project.module.content.entity.Content">
+        SELECT DISTINCT c.*
+        FROM contents c
+        <where>
+            <if test="type != null">AND c.type = #{type}</if>
+            <if test="status != null">AND c.status = #{status}</if>
+            <if test="category != null and category != ''">AND c.category = #{category}</if>
+        </where>
+        ORDER BY c.sort_order ASC, c.id DESC
+    </select>
+
+</mapper>

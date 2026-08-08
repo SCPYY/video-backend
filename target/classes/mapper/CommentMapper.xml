@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.module.social.mapper.CommentMapper">
+
+    <!-- 分页查询一级评论 -->
+    <select id="selectRootComments" resultType="com.project.module.social.entity.Comment">
+        SELECT c.*, u.nickname, u.avatar_url AS avatarUrl
+        FROM comments c
+        LEFT JOIN sys_user u ON c.user_id = u.id
+        WHERE c.content_id = #{contentId}
+          <if test="episodeId != null">
+              AND c.episode_id = #{episodeId}
+          </if>
+          <if test="episodeId == null">
+              AND c.episode_id IS NULL
+          </if>
+          AND c.parent_id = 0
+          AND c.status = 1
+        <choose>
+            <when test="sort == 'hot'">
+                ORDER BY c.like_count DESC, c.id DESC
+            </when>
+            <otherwise>
+                ORDER BY c.id DESC
+            </otherwise>
+        </choose>
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计一级评论数量 -->
+    <select id="countRootComments" resultType="long">
+        SELECT COUNT(*)
+        FROM comments
+        WHERE content_id = #{contentId}
+          <if test="episodeId != null">
+              AND episode_id = #{episodeId}
+          </if>
+          <if test="episodeId == null">
+              AND episode_id IS NULL
+          </if>
+          AND parent_id = 0
+          AND status = 1
+    </select>
+
+    <!-- 批量查询根评论下的子回复（每个根评论取前N条） -->
+    <select id="selectSubRepliesByRootIds" resultType="com.project.module.social.entity.Comment">
+        SELECT c.*, u.nickname, u.avatar_url AS avatarUrl,
+               ru.nickname AS replyToNickname
+        FROM comments c
+        LEFT JOIN sys_user u ON c.user_id = u.id
+        LEFT JOIN sys_user ru ON c.reply_to_user_id = ru.id
+        WHERE c.root_id IN
+            <foreach collection="rootIds" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+          AND c.parent_id != 0
+          AND c.status = 1
+        ORDER BY c.created_at ASC
+    </select>
+
+    <!-- 回复数+1 -->
+    <update id="incrementReplyCount">
+        UPDATE comments SET reply_count = reply_count + 1 WHERE id = #{commentId}
+    </update>
+
+    <!-- 点赞数+1 -->
+    <update id="incrementLikeCount">
+        UPDATE comments SET like_count = like_count + 1 WHERE id = #{commentId}
+    </update>
+
+    <!-- 点赞数-1 -->
+    <update id="decrementLikeCount">
+        UPDATE comments SET like_count = like_count - 1 WHERE id = #{commentId} AND like_count > 0
+    </update>
+
+    <!-- 点踩数+1 -->
+    <update id="incrementDislikeCount">
+        UPDATE comments SET dislike_count = dislike_count + 1 WHERE id = #{commentId}
+    </update>
+
+    <!-- 点踩数-1 -->
+    <update id="decrementDislikeCount">
+        UPDATE comments SET dislike_count = dislike_count - 1 WHERE id = #{commentId} AND dislike_count > 0
+    </update>
+
+</mapper>

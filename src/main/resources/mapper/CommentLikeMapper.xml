@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.module.social.mapper.CommentLikeMapper">
+
+    <!-- 根据评论ID和用户ID查询互动记录 -->
+    <select id="selectByCommentAndUser" resultType="com.project.module.social.entity.CommentLike">
+        SELECT * FROM comment_likes
+        WHERE comment_id = #{commentId} AND user_id = #{userId}
+    </select>
+
+    <!-- 批量查询用户对多个评论的点赞状态 -->
+    <select id="selectByUserAndCommentIds" resultType="com.project.module.social.entity.CommentLike">
+        SELECT * FROM comment_likes
+        WHERE user_id = #{userId}
+          AND comment_id IN
+            <foreach collection="commentIds" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+    </select>
+
+</mapper>
