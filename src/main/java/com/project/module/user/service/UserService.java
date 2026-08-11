@@ -6,8 +6,8 @@ import com.project.module.user.entity.SysUser;
 
 public interface UserService extends IService<SysUser> {
 
-    /** 用户注册 */
-    void register(RegisterRequest request);
+    /** 用户注册（注册成功后自动登录，返回Token） */
+    LoginResponse register(RegisterRequest request);
 
     /** 用户登录 */
     LoginResponse login(LoginRequest request);

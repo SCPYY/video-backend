@@ -28,6 +28,12 @@ public class ContentController {
         return Result.ok(contentService.pageContent(query));
     }
 
+    @Operation(summary = "首页轮播：最热短剧Top6")
+    @GetMapping("/carousel")
+    public Result<List<ContentListItemVO>> carousel() {
+        return Result.ok(contentService.carouselContent());
+    }
+
     @Operation(summary = "热门内容")
     @GetMapping("/hot")
     public Result<List<ContentListItemVO>> hot(

@@ -22,11 +22,10 @@ public class AuthController {
 
     private final UserService userService;
 
-    @Operation(summary = "用户注册")
+    @Operation(summary = "用户注册（注册成功自动登录返回Token）")
     @PostMapping("/register")
-    public Result<Void> register(@Valid @RequestBody RegisterRequest request) {
-        userService.register(request);
-        return Result.okMsg("注册成功");
+    public Result<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return Result.ok(userService.register(request));
     }
 
     @Operation(summary = "用户登录")

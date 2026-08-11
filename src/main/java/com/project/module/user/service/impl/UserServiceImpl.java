@@ -34,7 +34,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
 
     @Override
     @Transactional
-    public void register(RegisterRequest request) {
+    public LoginResponse register(RegisterRequest request) {
         // 检查用户名是否已存在
         if (lambdaQuery().eq(SysUser::getUsername, request.getUsername()).count() > 0) {
             throw new BusinessException(ErrorCode.USERNAME_EXISTS);
@@ -54,6 +54,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
         user.setStatus(0);
         baseMapper.insert(user);
         log.info("用户注册成功: id={}, username={}", user.getId(), user.getUsername());
+
+        // 注册成功，自动签发Token
+        return buildLoginResponse(user);
     }
 
     @Override
@@ -90,17 +93,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
         user.setLastLoginTime(LocalDateTime.now());
         baseMapper.updateById(user);
 
-        long expiresIn = jwtTokenProvider.getExpiration();
-        String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), "USER");
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
-
         log.info("用户登录成功: userId={}, username={}", user.getId(), user.getUsername());
-        return LoginResponse.builder()
-                .accessToken(token)
-                .refreshToken(refreshToken)
-                .expiresIn(expiresIn)
-                .tokenType("Bearer")
-                .build();
+        return buildLoginResponse(user);
     }
 
     @Override
@@ -115,16 +109,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        long expiresIn = jwtTokenProvider.getExpiration();
-        String newToken = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), "USER");
-        String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
-
-        return LoginResponse.builder()
-                .accessToken(newToken)
-                .refreshToken(newRefreshToken)
-                .expiresIn(expiresIn)
-                .tokenType("Bearer")
-                .build();
+        return buildLoginResponse(user);
     }
 
     @Override
@@ -165,5 +150,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
         }
         baseMapper.updateById(user);
         log.info("用户信息更新: userId={}", userId);
+    }
+
+    private LoginResponse buildLoginResponse(SysUser user) {
+        long expiresIn = jwtTokenProvider.getExpiration();
+        String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), "USER");
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
+
+        LoginResponse.UserInfo userInfo = LoginResponse.UserInfo.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .nickname(user.getNickname())
+                .avatarUrl(user.getAvatarUrl())
+                .email(user.getEmail())
+                .build();
+
+        return LoginResponse.builder()
+                .accessToken(token)
+                .refreshToken(refreshToken)
+                .expiresIn(expiresIn)
+                .tokenType("Bearer")
+                .user(userInfo)
+                .build();
     }
 }

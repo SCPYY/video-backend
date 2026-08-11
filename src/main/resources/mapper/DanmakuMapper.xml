@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.module.social.mapper.DanmakuMapper">
+
+    <!-- 按时间段查询弹幕 -->
+    <select id="selectByTimeRange" resultType="com.project.module.social.entity.Danmaku">
+        SELECT d.*, u.nickname, u.avatar_url AS avatarUrl
+        FROM danmaku d
+        LEFT JOIN sys_user u ON d.user_id = u.id
+        WHERE d.episode_id = #{episodeId}
+          AND d.video_time &gt;= #{startTime}
+          AND d.video_time &lt; #{endTime}
+          AND d.status = 1
+        ORDER BY d.video_time ASC, d.created_at ASC
+    </select>
+
+    <!-- 增加点赞数 -->
+    <update id="incrementLikeCount">
+        UPDATE danmaku SET like_count = like_count + 1 WHERE id = #{id}
+    </update>
+
+</mapper>

@@ -21,6 +21,9 @@ public class ContentListItemVO {
     @Schema(description = "封面图URL")
     private String coverUrl;
 
+    @Schema(description = "简介/描述")
+    private String description;
+
     @Schema(description = "分类", example = "爱情")
     private String category;
 

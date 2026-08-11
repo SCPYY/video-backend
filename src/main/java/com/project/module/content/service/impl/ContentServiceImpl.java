@@ -78,6 +78,18 @@ public class ContentServiceImpl extends ServiceImpl<ContentMapper, Content> impl
     }
 
     @Override
+    public List<ContentListItemVO> carouselContent() {
+        LambdaQueryWrapper<Content> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Content::getType, 1);
+        wrapper.eq(Content::getStatus, 1);
+        wrapper.orderByDesc(Content::getViewCount);
+        wrapper.last("LIMIT 6");
+
+        List<Content> list = list(wrapper);
+        return toVOList(list);
+    }
+
+    @Override
     public List<ContentListItemVO> hotContent(Integer limit) {
         limit = limit == null ? 8 : Math.min(limit, 20);
 
@@ -86,36 +98,7 @@ public class ContentServiceImpl extends ServiceImpl<ContentMapper, Content> impl
         wrapper.orderByDesc(Content::getViewCount);
         wrapper.last("LIMIT " + limit);
 
-        List<Content> hotList = list(wrapper);
-
-        // 收集所有 content_id，批量查询剧集统计
-        List<Long> contentIds = hotList.stream().map(Content::getId).collect(Collectors.toList());
-        Map<Long, Long> totalMap = Collections.emptyMap();
-        Map<Long, Long> freeMap = Collections.emptyMap();
-        if (!contentIds.isEmpty()) {
-            // 批量统计：按 content_id 分组的总集数
-            List<Map<String, Object>> stats = episodeMapper.selectMaps(
-                    new LambdaQueryWrapper<Episode>().in(Episode::getContentId, contentIds)
-                            .select(Episode::getContentId,
-                                    Episode::getId, Episode::getIsFree));
-            totalMap = stats.stream()
-                    .collect(Collectors.groupingBy(
-                            m -> (Long) m.get("content_id"), Collectors.counting()));
-            freeMap = stats.stream()
-                    .filter(m -> Integer.valueOf(1).equals(m.get("is_free")))
-                    .collect(Collectors.groupingBy(
-                            m -> (Long) m.get("content_id"), Collectors.counting()));
-        }
-
-        final Map<Long, Long> finalTotalMap = totalMap;
-        final Map<Long, Long> finalFreeMap = freeMap;
-        return hotList.stream().map(c -> {
-            ContentListItemVO vo = new ContentListItemVO();
-            BeanUtils.copyProperties(c, vo);
-            vo.setTotalEpisodes(finalTotalMap.getOrDefault(c.getId(), 0L).intValue());
-            vo.setFreeEpisodes(finalFreeMap.getOrDefault(c.getId(), 0L).intValue());
-            return vo;
-        }).collect(Collectors.toList());
+        return toVOList(list(wrapper));
     }
 
     @Override
@@ -149,6 +132,30 @@ public class ContentServiceImpl extends ServiceImpl<ContentMapper, Content> impl
         asyncIncrementViewCount(id);
 
         return vo;
+    }
+
+    /** 批量统计剧集后转为 VO 列表 */
+    private List<ContentListItemVO> toVOList(List<Content> contentList) {
+        if (contentList.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Long> contentIds = contentList.stream().map(Content::getId).collect(Collectors.toList());
+        List<Map<String, Object>> stats = episodeMapper.selectMaps(
+                new LambdaQueryWrapper<Episode>().in(Episode::getContentId, contentIds)
+                        .select(Episode::getContentId, Episode::getId, Episode::getIsFree));
+        Map<Long, Long> totalMap = stats.stream()
+                .collect(Collectors.groupingBy(m -> (Long) m.get("content_id"), Collectors.counting()));
+        Map<Long, Long> freeMap = stats.stream()
+                .filter(m -> Integer.valueOf(1).equals(m.get("is_free")))
+                .collect(Collectors.groupingBy(m -> (Long) m.get("content_id"), Collectors.counting()));
+
+        return contentList.stream().map(c -> {
+            ContentListItemVO vo = new ContentListItemVO();
+            BeanUtils.copyProperties(c, vo);
+            vo.setTotalEpisodes(totalMap.getOrDefault(c.getId(), 0L).intValue());
+            vo.setFreeEpisodes(freeMap.getOrDefault(c.getId(), 0L).intValue());
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     /** 异步更新观看次数，通过 Redis 计数后定时批量同步到 DB */

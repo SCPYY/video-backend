@@ -34,7 +34,7 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_NAME: project_db
+      DB_NAME: ${DB_NAME:-video-db}
       DB_USER: root
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
       REDIS_HOST: redis

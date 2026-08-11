@@ -17,6 +17,9 @@ public interface ContentService extends IService<Content> {
     /** 热门内容 */
     List<ContentListItemVO> hotContent(Integer limit);
 
+    /** 首页轮播：最热短剧 Top6 */
+    List<ContentListItemVO> carouselContent();
+
     /** 内容详情（含扩展属性） */
     ContentDetailVO getDetail(Long id);
 }

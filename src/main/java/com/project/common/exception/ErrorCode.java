@@ -46,7 +46,9 @@ public enum ErrorCode {
     // 社交/评论 8xxxx
     COMMENT_SENSITIVE(80001, "评论包含违规内容"),
     COMMENT_RATE_LIMIT(80002, "评论过于频繁，请稍后再试"),
-    COMMENT_NOT_FOUND(80003, "评论不存在");
+    COMMENT_NOT_FOUND(80003, "评论不存在"),
+    DANMAKU_RATE_LIMIT(80004, "弹幕发送过于频繁，请稍后再试"),
+    DANMAKU_NOT_FOUND(80005, "弹幕不存在");
 
     private final int code;
     private final String msg;

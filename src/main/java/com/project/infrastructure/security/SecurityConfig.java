@@ -41,6 +41,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/comments/**").permitAll()
                         .requestMatchers("/api/v1/comments/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/danmaku/**").permitAll()
+                        .requestMatchers("/api/v1/danmaku/**").authenticated()
                         // Swagger/Knife4j
                         .requestMatchers("/doc.html", "/webjars/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
                         // H2 Console

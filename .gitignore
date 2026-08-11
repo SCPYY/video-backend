@@ -1,0 +1,15 @@
+# Build output
+target/
+
+# Local Maven cache
+.m2/
+
+# IDE metadata
+.idea/
+.vscode/
+
+# Local tools and runtime files
+minio.exe
+*.log
+.env
+.env.*

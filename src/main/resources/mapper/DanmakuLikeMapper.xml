@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.module.social.mapper.DanmakuLikeMapper">
+
+    <select id="selectByDanmakuAndUser" resultType="com.project.module.social.entity.DanmakuLike">
+        SELECT * FROM danmaku_likes WHERE danmaku_id = #{danmakuId} AND user_id = #{userId}
+    </select>
+
+    <select id="selectByUserAndDanmakuIds" resultType="com.project.module.social.entity.DanmakuLike">
+        SELECT * FROM danmaku_likes
+        WHERE user_id = #{userId}
+        AND danmaku_id IN
+        <foreach collection="danmakuIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+</mapper>
