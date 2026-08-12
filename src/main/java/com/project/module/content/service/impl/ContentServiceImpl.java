@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.time.Duration;
 
 @Slf4j
 @Service
@@ -46,8 +47,8 @@ public class ContentServiceImpl extends ServiceImpl<ContentMapper, Content> impl
         LambdaQueryWrapper<Content> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(query.getType() != null, Content::getType, query.getType());
         wrapper.eq(query.getStatus() != null, Content::getStatus, query.getStatus());
-        wrapper.eq(query.getCategory() != null && !query.getCategory().isBlank(),
-                Content::getCategory, query.getCategory());
+        wrapper.eq(Content::getStatus, 1);
+        wrapper.eq(query.getCategory() != null, Content::getCategoryId, query.getCategory());
         wrapper.like(query.getKeyword() != null && !query.getKeyword().isBlank(),
                 Content::getTitle, query.getKeyword());
         wrapper.orderByDesc(Content::getSortOrder);
@@ -81,7 +82,7 @@ public class ContentServiceImpl extends ServiceImpl<ContentMapper, Content> impl
     public List<ContentListItemVO> carouselContent() {
         LambdaQueryWrapper<Content> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Content::getType, 1);
-        wrapper.eq(Content::getStatus, 1);
+        wrapper.eq(Content::getContentStatus, 4);
         wrapper.orderByDesc(Content::getViewCount);
         wrapper.last("LIMIT 6");
 
@@ -90,26 +91,16 @@ public class ContentServiceImpl extends ServiceImpl<ContentMapper, Content> impl
     }
 
     @Override
-    public List<ContentListItemVO> hotContent(Integer limit) {
-        limit = limit == null ? 8 : Math.min(limit, 20);
-
-        LambdaQueryWrapper<Content> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Content::getStatus, 1);
-        wrapper.orderByDesc(Content::getViewCount);
-        wrapper.last("LIMIT " + limit);
-
-        return toVOList(list(wrapper));
-    }
-
-    @Override
-    public ContentDetailVO getDetail(Long id) {
+    public ContentDetailVO getDetail(Long id, Long userId, String visitorKey) {
         Content content = getById(id);
         if (content == null) {
             throw new BusinessException(ErrorCode.CONTENT_NOT_FOUND);
         }
-        if (content.getStatus() == 0) {
+        if (!Integer.valueOf(4).equals(content.getContentStatus())) {
             throw new BusinessException(ErrorCode.CONTENT_OFFLINE);
         }
+
+        recordView(id, userId, visitorKey);
 
         ContentDetailVO vo = new ContentDetailVO();
         BeanUtils.copyProperties(content, vo);
@@ -132,6 +123,15 @@ public class ContentServiceImpl extends ServiceImpl<ContentMapper, Content> impl
         asyncIncrementViewCount(id);
 
         return vo;
+    }
+
+    private void recordView(Long contentId, Long userId, String visitorKey) {
+        String identity = userId != null ? "user:" + userId : "guest:" + Integer.toHexString(visitorKey.hashCode());
+        String dedupKey = "content:view:dedup:" + contentId + ":" + identity;
+        try {
+            Boolean first = stringRedisTemplate.opsForValue().setIfAbsent(dedupKey, "1", Duration.ofMinutes(30));
+            if (Boolean.TRUE.equals(first)) stringRedisTemplate.opsForHash().increment("content:view:pending", String.valueOf(contentId), 1L);
+        } catch (Exception e) { log.warn("记录内容浏览量失败: contentId={}", contentId, e); }
     }
 
     /** 批量统计剧集后转为 VO 列表 */
@@ -164,4 +164,5 @@ public class ContentServiceImpl extends ServiceImpl<ContentMapper, Content> impl
         stringRedisTemplate.opsForValue().increment(key);
         stringRedisTemplate.expire(key, 1, TimeUnit.HOURS);
     }
+
 }

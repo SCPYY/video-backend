@@ -14,7 +14,7 @@ public class SysAdmin {
 
     private String username;
     private String passwordHash;
-    private String role;          // ADMIN / EDITOR / VIEWER
+    private String role;          // SUPER_ADMIN / ADMIN / OPERATOR
     private Integer status;       // 0-正常 1-禁用
     private LocalDateTime lastLoginTime;
 

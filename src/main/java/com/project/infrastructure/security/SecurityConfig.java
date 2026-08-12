@@ -1,8 +1,12 @@
 package com.project.infrastructure.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.common.response.Result;
+import com.project.common.response.ResultCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -17,6 +21,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.nio.charset.StandardCharsets;
 
 @Configuration
 @EnableWebSecurity
@@ -25,6 +30,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ObjectMapper objectMapper;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -32,13 +38,30 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, exception) -> {
+                            response.setStatus(401);
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                            response.getWriter().write(objectMapper.writeValueAsString(
+                                    Result.fail(ResultCode.UNAUTHORIZED, "请先登录或重新登录")));
+                        })
+                        .accessDeniedHandler((request, response, exception) -> {
+                            response.setStatus(403);
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                            response.getWriter().write(objectMapper.writeValueAsString(
+                                    Result.fail(ResultCode.FORBIDDEN, "无权访问该资源")));
+                        }))
                 .authorizeHttpRequests(auth -> auth
                         // 公开接口
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/admin/auth/**").permitAll()
+                        .requestMatchers("/api/v1/admin/auth/login").permitAll()
                         .requestMatchers("/api/v1/contents/**").permitAll()
                         .requestMatchers("/api/v1/episodes/**").permitAll()
                         .requestMatchers("/api/v1/products/**").permitAll()
+                        // 本地图片/视频静态资源公开访问；上传接口仍由 /api/v1/admin/upload/** 的方法权限保护
+                        .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/comments/**").permitAll()
                         .requestMatchers("/api/v1/comments/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/danmaku/**").permitAll()

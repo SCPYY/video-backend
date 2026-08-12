@@ -15,6 +15,7 @@ public class ContentCreateRequest {
     @Schema(description = "类型：1-短剧 2-影游", example = "1")
     private Integer type;
 
+
     @NotBlank(message = "标题不能为空")
     @Schema(description = "标题", example = "新短剧")
     private String title;
@@ -27,6 +28,9 @@ public class ContentCreateRequest {
 
     @Schema(description = "分类")
     private String category;
+
+    @Schema(description = "分类ID，优先使用该字段")
+    private Long categoryId;
 
     @Schema(description = "标签（逗号分隔）")
     private String tags;

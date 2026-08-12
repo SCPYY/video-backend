@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -93,17 +94,21 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Override
     public Page<OrderVO> pageUserOrders(Long userId, Integer pageNum, Integer size, Integer status) {
+        int safePage = pageNum == null || pageNum < 1 ? 1 : pageNum;
+        int safeSize = size == null ? 10 : Math.max(1, Math.min(size, 100));
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Order::getUserId, userId);
         wrapper.eq(status != null, Order::getStatus, status);
         wrapper.orderByDesc(Order::getId);
 
-        Page<Order> page = page(new Page<>(pageNum != null ? pageNum : 1, size != null ? size : 10), wrapper);
+        Page<Order> page = page(new Page<>(safePage, safeSize), wrapper);
 
         // 批量获取商品名称
         List<Long> productIds = page.getRecords().stream().map(Order::getProductId).distinct().collect(Collectors.toList());
-        Map<Long, String> productNameMap = productMapper.selectBatchIds(productIds).stream()
-                .collect(Collectors.toMap(Product::getId, Product::getName));
+        Map<Long, String> productNameMap = productIds.isEmpty()
+                ? Collections.emptyMap()
+                : productMapper.selectBatchIds(productIds).stream()
+                        .collect(Collectors.toMap(Product::getId, Product::getName));
 
         List<OrderVO> records = page.getRecords().stream()
                 .map(o -> toVO(o, productNameMap.get(o.getProductId())))

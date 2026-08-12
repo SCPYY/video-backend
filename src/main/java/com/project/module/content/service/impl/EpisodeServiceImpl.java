@@ -17,6 +17,7 @@ import com.project.module.product.entity.Product;
 import com.project.module.product.mapper.ProductMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -29,8 +30,10 @@ import java.util.stream.Collectors;
 public class EpisodeServiceImpl extends ServiceImpl<EpisodeMapper, Episode> implements EpisodeService {
 
     private final ContentMapper contentMapper;
+    private final EpisodeMapper episodeMapper;
     private final EntitlementMapper entitlementMapper;
     private final ProductMapper productMapper;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Override
     public List<EpisodeVO> getEpisodesByContentId(Long contentId) {
@@ -56,7 +59,7 @@ public class EpisodeServiceImpl extends ServiceImpl<EpisodeMapper, Episode> impl
     }
 
     @Override
-    public EpisodePlayVO getPlayInfo(Long episodeId, Long userId) {
+    public EpisodePlayVO getPlayInfo(Long episodeId, Long userId, String visitorKey) {
         Episode episode = getById(episodeId);
         if (episode == null) {
             throw new BusinessException(ErrorCode.EPISODE_NOT_FOUND);
@@ -86,6 +89,14 @@ public class EpisodeServiceImpl extends ServiceImpl<EpisodeMapper, Episode> impl
 
         if (hasAccess) {
             vo.setVideoUrl(episode.getVideoUrl());
+            episodeMapper.incrementPlayCount(episode.getId());
+            contentMapper.incrementPlayCount(content.getId());
+            String identity = userId != null ? "user:" + userId : "guest:" + Integer.toHexString(visitorKey.hashCode());
+            String uniqueKey = "content:play-user:dedup:" + content.getId() + ":" + identity;
+            try {
+                Boolean first = stringRedisTemplate.opsForValue().setIfAbsent(uniqueKey, "1", java.time.Duration.ofMinutes(30));
+                if (Boolean.TRUE.equals(first)) stringRedisTemplate.opsForHash().increment("content:play-user:pending", String.valueOf(content.getId()), 1L);
+            } catch (Exception e) { log.warn("记录播放用户数失败: contentId={}", content.getId(), e); }
         } else {
             // 查找推荐的购买商品
             Product suggested = findSuggestedProduct(episode, content);

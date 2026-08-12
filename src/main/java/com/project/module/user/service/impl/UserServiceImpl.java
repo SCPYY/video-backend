@@ -52,6 +52,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
         user.setEmail(request.getEmail());
         user.setNickname(request.getUsername());
         user.setStatus(0);
+        user.setTokenVersion(0);
         baseMapper.insert(user);
         log.info("用户注册成功: id={}, username={}", user.getId(), user.getUsername());
 
@@ -75,7 +76,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
-        if (user.getStatus() == 1) {
+        if (user.getStatus() != 0) {
             throw new BusinessException(ErrorCode.ACCOUNT_DISABLED);
         }
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
@@ -105,7 +106,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
 
         Long userId = jwtTokenProvider.getUserId(refreshToken);
         SysUser user = getById(userId);
-        if (user == null || user.getStatus() == 1) {
+        if (user == null || user.getStatus() != 0) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
@@ -154,7 +155,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
 
     private LoginResponse buildLoginResponse(SysUser user) {
         long expiresIn = jwtTokenProvider.getExpiration();
-        String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), "USER");
+        String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), "USER",
+                user.getTokenVersion() == null ? 0 : user.getTokenVersion());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
 
         LoginResponse.UserInfo userInfo = LoginResponse.UserInfo.builder()

@@ -27,3 +27,8 @@ logging:
   level:
     com.project: debug
     org.springframework.security: debug
+
+app:
+  media:
+    # Windows示例：C:/ffmpeg/bin/ffprobe.exe；Linux可配置为 /usr/bin/ffprobe
+    ffprobe-path: ${FFPROBE_PATH:C:/Users/Administrator/Desktop/backend/tools/ffmpeg-9.0-essentials_build/bin/ffprobe.exe}

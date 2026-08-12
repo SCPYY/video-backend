@@ -3,6 +3,7 @@ package com.project.module.admin.service;
 import com.project.module.admin.dto.BatchAddEpisodesRequest;
 import com.project.module.admin.dto.SortEpisodesRequest;
 import com.project.module.content.entity.Episode;
+import java.util.List;
 
 public interface AdminEpisodeService {
 
@@ -30,4 +31,6 @@ public interface AdminEpisodeService {
      * 调整排序
      */
     void sortEpisodes(SortEpisodesRequest request, Long adminId);
+    List<Episode> listEpisodes(Long contentId);
+    Episode getEpisode(Long id);
 }

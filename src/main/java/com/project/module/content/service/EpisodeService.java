@@ -13,5 +13,5 @@ public interface EpisodeService extends IService<Episode> {
     List<EpisodeVO> getEpisodesByContentId(Long contentId);
 
     /** 获取播放信息（含鉴权） */
-    EpisodePlayVO getPlayInfo(Long episodeId, Long userId);
+    EpisodePlayVO getPlayInfo(Long episodeId, Long userId, String visitorKey);
 }

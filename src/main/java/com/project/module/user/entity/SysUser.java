@@ -18,7 +18,11 @@ public class SysUser {
     private String passwordHash;
     private String nickname;
     private String avatarUrl;
-    private Integer status;       // 0-正常 1-禁用
+    private Integer status;       // 0-正常 1-禁用 2-注销
+    private String statusReason;
+    private LocalDateTime disabledAt;
+    private Long disabledBy;
+    private Integer tokenVersion;
     private LocalDateTime lastLoginTime;
 
     @TableField(fill = FieldFill.INSERT)

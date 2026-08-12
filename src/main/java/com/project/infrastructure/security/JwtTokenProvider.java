@@ -33,11 +33,16 @@ public class JwtTokenProvider {
 
     /** 生成访问令牌 */
     public String generateToken(Long userId, String username, String role) {
+        return generateToken(userId, username, role, 0);
+    }
+
+    public String generateToken(Long userId, String username, String role, Integer tokenVersion) {
         Date now = new Date();
         return Jwts.builder()
                 .setSubject(String.valueOf(userId))
                 .claim("username", username)
                 .claim("role", role)
+                .claim("tokenVersion", tokenVersion == null ? 0 : tokenVersion)
                 .setIssuer(issuer)
                 .setIssuedAt(now)
                 .setExpiration(new Date(now.getTime() + expiration))

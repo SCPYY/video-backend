@@ -46,7 +46,8 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         }
 
         // 生成JWT
-        String token = jwtTokenProvider.generateToken(admin.getId(), admin.getUsername(), admin.getRole());
+        // 新角色名对外使用，JWT 内部兼容现有接口注解：SUPER_ADMIN/ADMIN/OPERATOR -> ADMIN/EDITOR/VIEWER。
+        String token = jwtTokenProvider.generateToken(admin.getId(), admin.getUsername(), legacyRole(admin.getRole()));
 
         // 更新最后登录时间
         admin.setLastLoginTime(LocalDateTime.now());
@@ -60,6 +61,15 @@ public class AdminAuthServiceImpl implements AdminAuthService {
                 .username(admin.getUsername())
                 .role(admin.getRole())
                 .build();
+    }
+
+    private String legacyRole(String role) {
+        return switch (role == null ? "OPERATOR" : role.toUpperCase()) {
+            case "SUPER_ADMIN" -> "ADMIN";
+            case "ADMIN" -> "EDITOR";
+            case "OPERATOR" -> "VIEWER";
+            default -> role;
+        };
     }
 
     @Override

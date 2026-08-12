@@ -18,6 +18,6 @@ public class AdminLoginResponse {
     @Schema(description = "用户名")
     private String username;
 
-    @Schema(description = "角色：ADMIN/EDITOR/VIEWER")
+    @Schema(description = "角色：SUPER_ADMIN/ADMIN/OPERATOR")
     private String role;
 }

@@ -14,7 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-@Tag(name = "管理后台-文件上传", description = "图片、视频上传（骨架，待服务器确定后完善）")
+@Tag(name = "管理后台-文件上传", description = "图片、视频上传到本地服务器")
 @RestController
 @RequestMapping("/api/v1/admin/upload")
 @RequiredArgsConstructor
@@ -33,7 +33,7 @@ public class UploadController {
         return null;
     }
 
-    @Operation(summary = "上传图片（骨架）")
+    @Operation(summary = "上传图片", description = "保存到本地 uploads/images 目录，返回可访问 URL。支持 jpg/jpeg/png/webp/gif，最大 10MB。")
     @PostMapping("/image")
     @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
     public Result<ImageUploadVO> uploadImage(
@@ -42,7 +42,7 @@ public class UploadController {
         return Result.ok(uploadService.uploadImage(file, getAdminId()));
     }
 
-    @Operation(summary = "上传视频（骨架）")
+    @Operation(summary = "上传视频", description = "保存到本地 uploads/videos 目录，并使用 FFprobe 识别视频时长，返回秒数。支持 mp4/mkv/mov/webm/avi，最大 2GB。")
     @PostMapping("/video")
     @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
     public Result<VideoUploadVO> uploadVideo(

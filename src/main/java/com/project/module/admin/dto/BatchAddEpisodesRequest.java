@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 @Data
 @Schema(description = "批量添加剧集请求")
@@ -37,6 +38,12 @@ public class BatchAddEpisodesRequest {
 
         @Schema(description = "是否免费：0-付费 1-免费", example = "1")
         private Integer isFree;
+
+        @Schema(description = "访问类型：1-免费集 2-付费集 3-会员免费", example = "2")
+        private Integer accessType;
+
+        @Schema(description = "付费集价格，单位：平台币", example = "10")
+        private BigDecimal pricePlatformCoin;
 
         @Schema(description = "排序", example = "1")
         private Integer sortOrder;

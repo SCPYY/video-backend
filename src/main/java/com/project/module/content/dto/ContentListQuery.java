@@ -13,8 +13,8 @@ public class ContentListQuery {
     @Schema(description = "状态：0-下架 1-上架", example = "1")
     private Integer status;
 
-    @Schema(description = "分类", example = "爱情")
-    private String category;
+    @Schema(description = "分类ID", example = "1")
+    private Long category;
 
     @Schema(description = "关键词搜索（标题模糊匹配）", example = "霸道")
     private String keyword;

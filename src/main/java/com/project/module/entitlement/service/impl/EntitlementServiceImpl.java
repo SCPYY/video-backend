@@ -2,6 +2,7 @@ package com.project.module.entitlement.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.project.common.exception.BusinessException;
 import com.project.common.exception.ErrorCode;
 import com.project.module.content.entity.Content;
@@ -9,9 +10,11 @@ import com.project.module.content.entity.Episode;
 import com.project.module.content.mapper.ContentMapper;
 import com.project.module.content.mapper.EpisodeMapper;
 import com.project.module.entitlement.dto.EntitlementVO;
+import com.project.module.entitlement.dto.MyEntitlementVO;
 import com.project.module.entitlement.entity.UserEntitlement;
 import com.project.module.entitlement.mapper.EntitlementMapper;
 import com.project.module.entitlement.service.EntitlementService;
+import com.project.module.admin.service.AdminLogService;
 import com.project.module.product.entity.Product;
 import com.project.module.product.mapper.ProductMapper;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +36,7 @@ public class EntitlementServiceImpl extends ServiceImpl<EntitlementMapper, UserE
     private final ContentMapper contentMapper;
     private final EpisodeMapper episodeMapper;
     private final ProductMapper productMapper;
+    private final AdminLogService adminLogService;
 
     @Override
     public boolean checkAccess(Long userId, Long contentId, Long episodeId) {
@@ -113,8 +117,83 @@ public class EntitlementServiceImpl extends ServiceImpl<EntitlementMapper, UserE
     }
 
     @Override
+    public Page<MyEntitlementVO> pageMyEntitlements(Long userId, Integer contentType,
+                                                     Integer pageNum, Integer size) {
+        if (contentType != null && contentType != 1 && contentType != 2) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "内容类型只能是1（短剧）或2（影游）");
+        }
+
+        int safePage = pageNum == null || pageNum < 1 ? 1 : pageNum;
+        int safeSize = size == null ? 12 : Math.max(1, Math.min(size, 100));
+        LambdaQueryWrapper<UserEntitlement> wrapper = new LambdaQueryWrapper<UserEntitlement>()
+                .eq(UserEntitlement::getUserId, userId)
+                .eq(UserEntitlement::getType, 1)
+                .isNotNull(UserEntitlement::getContentId)
+                .orderByDesc(UserEntitlement::getCreatedAt)
+                .orderByDesc(UserEntitlement::getId);
+
+        if (contentType != null) {
+            List<Long> typedContentIds = contentMapper.selectList(new LambdaQueryWrapper<Content>()
+                            .select(Content::getId)
+                            .eq(Content::getType, contentType))
+                    .stream().map(Content::getId).collect(Collectors.toList());
+            if (typedContentIds.isEmpty()) {
+                return new Page<>(safePage, safeSize, 0);
+            }
+            wrapper.in(UserEntitlement::getContentId, typedContentIds);
+        }
+
+        Page<UserEntitlement> source = page(new Page<>(safePage, safeSize), wrapper);
+        List<Long> contentIds = source.getRecords().stream()
+                .map(UserEntitlement::getContentId).distinct().collect(Collectors.toList());
+        List<Long> episodeIds = source.getRecords().stream()
+                .map(UserEntitlement::getEpisodeId).filter(id -> id != null).distinct().collect(Collectors.toList());
+
+        Map<Long, Content> contentMap = contentIds.isEmpty() ? Collections.emptyMap() :
+                contentMapper.selectBatchIds(contentIds).stream()
+                        .collect(Collectors.toMap(Content::getId, content -> content));
+        Map<Long, Episode> episodeMap = episodeIds.isEmpty() ? Collections.emptyMap() :
+                episodeMapper.selectBatchIds(episodeIds).stream()
+                        .collect(Collectors.toMap(Episode::getId, episode -> episode));
+
+        LocalDateTime now = LocalDateTime.now();
+        List<MyEntitlementVO> records = source.getRecords().stream().map(entitlement -> {
+            MyEntitlementVO vo = new MyEntitlementVO();
+            Content content = contentMap.get(entitlement.getContentId());
+            Episode episode = entitlement.getEpisodeId() == null
+                    ? null : episodeMap.get(entitlement.getEpisodeId());
+            vo.setEntitlementId(entitlement.getId());
+            vo.setContentId(entitlement.getContentId());
+            if (content != null) {
+                vo.setContentType(content.getType());
+                vo.setTitle(content.getTitle());
+                vo.setDescription(content.getDescription());
+                vo.setCoverUrl(content.getCoverUrl());
+                vo.setCategory(content.getCategory());
+                vo.setTags(content.getTags());
+            }
+            vo.setAccessScope(entitlement.getEpisodeId() == null ? "FULL_CONTENT" : "SINGLE_EPISODE");
+            vo.setEpisodeId(entitlement.getEpisodeId());
+            if (episode != null) {
+                vo.setEpisodeNumber(episode.getEpisodeNumber());
+                vo.setEpisodeTitle(episode.getTitle());
+            }
+            vo.setExpireTime(entitlement.getExpireTime());
+            vo.setPermanent(entitlement.getExpireTime() == null);
+            vo.setExpired(entitlement.getExpireTime() != null && !entitlement.getExpireTime().isAfter(now));
+            vo.setAcquiredAt(entitlement.getCreatedAt());
+            return vo;
+        }).collect(Collectors.toList());
+
+        Page<MyEntitlementVO> result = new Page<>(source.getCurrent(), source.getSize(), source.getTotal());
+        result.setPages(source.getPages());
+        result.setRecords(records);
+        return result;
+    }
+
+    @Override
     @Transactional
-    public void grant(Long userId, Long productId) {
+    public UserEntitlement grant(Long userId, Long productId) {
         Product product = productMapper.selectById(productId);
         if (product == null || product.getStatus() == 0) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "商品不存在或已下架");
@@ -147,5 +226,45 @@ public class EntitlementServiceImpl extends ServiceImpl<EntitlementMapper, UserE
 
         save(entitlement);
         log.info("权益发放成功: userId={}, productId={}, type={}", userId, productId, product.getType());
+        return entitlement;
+    }
+
+    @Override
+    public Page<EntitlementVO> pageAdminEntitlements(Long userId, Integer type, Integer pageNum, Integer size) {
+        Page<UserEntitlement> source = page(new Page<>(pageNum == null || pageNum < 1 ? 1 : pageNum,
+                        size == null ? 20 : Math.min(100, Math.max(1, size))),
+                new LambdaQueryWrapper<UserEntitlement>()
+                        .eq(userId != null, UserEntitlement::getUserId, userId)
+                        .eq(type != null, UserEntitlement::getType, type)
+                        .orderByDesc(UserEntitlement::getId));
+        Page<EntitlementVO> result = new Page<>(source.getCurrent(), source.getSize(), source.getTotal());
+        result.setRecords(source.getRecords().stream().map(this::toEntitlementVO).collect(Collectors.toList()));
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public EntitlementVO grantByProduct(Long userId, Long productId, Long adminId) {
+        UserEntitlement entitlement = grant(userId, productId);
+        adminLogService.log(adminId, "GRANT", "ENTITLEMENT", String.valueOf(entitlement.getId()), null, entitlement);
+        return toEntitlementVO(entitlement);
+    }
+
+    @Override
+    @Transactional
+    public void revoke(Long entitlementId, Long adminId) {
+        UserEntitlement entitlement = getById(entitlementId);
+        if (entitlement == null) throw new BusinessException(ErrorCode.PARAM_ERROR, "权益不存在");
+        removeById(entitlementId);
+        adminLogService.log(adminId, "REVOKE", "ENTITLEMENT", String.valueOf(entitlementId), entitlement, null);
+    }
+
+    private EntitlementVO toEntitlementVO(UserEntitlement e) {
+        EntitlementVO vo = new EntitlementVO();
+        vo.setId(e.getId()); vo.setUserId(e.getUserId()); vo.setType(e.getType());
+        vo.setContentId(e.getContentId()); vo.setEpisodeId(e.getEpisodeId());
+        vo.setExpireTime(e.getExpireTime()); vo.setIsExpired(e.getExpireTime() != null && e.getExpireTime().isBefore(LocalDateTime.now()));
+        vo.setCreatedAt(e.getCreatedAt());
+        return vo;
     }
 }

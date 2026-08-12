@@ -5,11 +5,11 @@
     <!-- 批量插入剧集 -->
     <insert id="batchInsert" parameterType="list">
         INSERT INTO episodes (content_id, episode_number, title, video_url, duration,
-            is_free, sort_order, source_type, transcode_status, original_filename, file_size, created_at)
+            is_free, access_type, price_platform_coin, sort_order, source_type, transcode_status, original_filename, file_size, created_at)
         VALUES
         <foreach collection="list" item="item" separator=",">
             (#{item.contentId}, #{item.episodeNumber}, #{item.title}, #{item.videoUrl},
-             #{item.duration}, #{item.isFree}, #{item.sortOrder}, #{item.sourceType},
+             #{item.duration}, #{item.isFree}, #{item.accessType}, #{item.pricePlatformCoin}, #{item.sortOrder}, #{item.sourceType},
              #{item.transcodeStatus}, #{item.originalFilename}, #{item.fileSize}, #{item.createdAt})
         </foreach>
     </insert>

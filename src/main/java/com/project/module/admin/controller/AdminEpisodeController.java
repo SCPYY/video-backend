@@ -14,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @Tag(name = "管理后台-剧集管理", description = "剧集的增删改查、批量添加、排序")
 @RestController
@@ -22,6 +23,20 @@ import org.springframework.web.bind.annotation.*;
 public class AdminEpisodeController {
 
     private final AdminEpisodeService adminEpisodeService;
+
+    @Operation(summary = "查询内容剧集列表")
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR','VIEWER')")
+    public Result<List<Episode>> list(@RequestParam Long contentId) {
+        return Result.ok(adminEpisodeService.listEpisodes(contentId));
+    }
+
+    @Operation(summary = "查询剧集详情")
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR','VIEWER')")
+    public Result<Episode> detail(@PathVariable Long id) {
+        return Result.ok(adminEpisodeService.getEpisode(id));
+    }
 
     /**
      * 获取当前管理员ID

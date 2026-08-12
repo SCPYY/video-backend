@@ -12,6 +12,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Tag(name = "剧集接口", description = "剧集列表、播放信息获取")
 @RestController
@@ -29,10 +30,20 @@ public class EpisodeController {
 
     @Operation(summary = "获取播放信息（含鉴权）")
     @GetMapping("/episodes/{id}/play")
-    public Result<EpisodePlayVO> play(@PathVariable Long id) {
+    public Result<EpisodePlayVO> play(@PathVariable Long id, HttpServletRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Long userId = auth != null && auth.getPrincipal() instanceof Long
                 ? (Long) auth.getPrincipal() : null;
-        return Result.ok(episodeService.getPlayInfo(id, userId));
+        String visitorKey = request.getRemoteAddr() + "|" + request.getHeader("User-Agent");
+        EpisodePlayVO vo = episodeService.getPlayInfo(id, userId, visitorKey);
+        if (vo.getVideoUrl() != null && vo.getVideoUrl().startsWith("/")) {
+            String base = request.getScheme() + "://" + request.getServerName();
+            if ((request.getScheme().equals("http") && request.getServerPort() != 80)
+                    || (request.getScheme().equals("https") && request.getServerPort() != 443)) {
+                base += ":" + request.getServerPort();
+            }
+            vo.setVideoUrl(base + vo.getVideoUrl());
+        }
+        return Result.ok(vo);
     }
 }

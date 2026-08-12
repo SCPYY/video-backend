@@ -19,6 +19,7 @@ public class Product {
     private String name;
     private BigDecimal priceUsd;
     private BigDecimal priceEur;
+    private BigDecimal pricePlatformCoin;
     private Integer durationDays; // 会员有效期天数
     private Integer status;       // 0-下架 1-上架
 

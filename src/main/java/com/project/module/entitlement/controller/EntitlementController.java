@@ -2,7 +2,9 @@ package com.project.module.entitlement.controller;
 
 import com.project.common.response.Result;
 import com.project.module.entitlement.dto.EntitlementVO;
+import com.project.module.entitlement.dto.MyEntitlementVO;
 import com.project.module.entitlement.service.EntitlementService;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,5 +45,15 @@ public class EntitlementController {
     @GetMapping("/list")
     public Result<List<EntitlementVO>> list() {
         return Result.ok(entitlementService.listUserEntitlements(getUserId()));
+    }
+
+    @Operation(summary = "分页查询我的已购短剧和影游")
+    @GetMapping("/mine")
+    public Result<Page<MyEntitlementVO>> mine(
+            @Parameter(description = "内容类型：1-短剧 2-影游，不传表示全部")
+            @RequestParam(required = false) Integer contentType,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "12") Integer size) {
+        return Result.ok(entitlementService.pageMyEntitlements(getUserId(), contentType, page, size));
     }
 }

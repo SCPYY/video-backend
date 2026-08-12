@@ -36,6 +36,15 @@ public class ContentDetailVO {
 
     @Schema(description = "观看次数")
     private Long viewCount;
+    private Long playCount;
+    private Long uniqueViewCount;
+    @Schema(description = "去重播放用户数")
+    private Long playUserCount;
+    private Long likeCount;
+    private Long favoriteCount;
+    private Long shareCount;
+    private Long commentCount;
+    private Long danmakuCount;
 
     @Schema(description = "排序权重")
     private Integer sortOrder;

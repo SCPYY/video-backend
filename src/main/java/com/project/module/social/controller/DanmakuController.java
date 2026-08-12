@@ -53,8 +53,8 @@ public class DanmakuController {
     @GetMapping
     public Result<List<DanmakuVO>> list(
             @Parameter(description = "剧集ID") @RequestParam Long episodeId,
-            @Parameter(description = "起始时间（秒）") @RequestParam Integer startTime,
-            @Parameter(description = "结束时间（秒）") @RequestParam Integer endTime) {
+            @Parameter(description = "起始时间（秒），不传则从头查询") @RequestParam(required = false) Integer startTime,
+            @Parameter(description = "结束时间（秒），不传则查询到结尾") @RequestParam(required = false) Integer endTime) {
         return Result.ok(danmakuService.getDanmakuList(episodeId, getUserId(), startTime, endTime));
     }
 

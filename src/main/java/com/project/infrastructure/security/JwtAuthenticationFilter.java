@@ -10,6 +10,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import com.project.module.user.entity.SysUser;
+import com.project.module.user.mapper.UserMapper;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -29,6 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final StringRedisTemplate stringRedisTemplate;
+    private final UserMapper userMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String TOKEN_BLACKLIST_PREFIX = "token:blacklist:";
@@ -56,6 +59,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 var claims = jwtTokenProvider.parseToken(token);
                 String role = claims.get("role", String.class);
 
+                if ("USER".equals(role)) {
+                    SysUser user = userMapper.selectById(userId);
+                    Integer tokenVersion = claims.get("tokenVersion", Integer.class);
+                    if (user == null || user.getStatus() != 0
+                            || (tokenVersion != null && !tokenVersion.equals(user.getTokenVersion()))) {
+                        writeUnauthorizedResponse(response, "账户已禁用或登录状态已失效");
+                        return;
+                    }
+                }
+
                 List<SimpleGrantedAuthority> authorities = List.of(
                         new SimpleGrantedAuthority("ROLE_" + (role != null ? role : "USER"))
                 );
@@ -63,6 +76,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userId, token, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+            } else {
+                writeUnauthorizedResponse(response, "Token无效或已过期");
+                return;
             }
         } catch (Exception e) {
             log.warn("JWT认证失败: {}", e.getMessage());

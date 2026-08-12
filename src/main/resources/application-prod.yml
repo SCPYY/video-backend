@@ -31,3 +31,7 @@ logging:
     org.springframework.security: warn
   file:
     path: /var/log/project
+
+app:
+  media:
+    ffprobe-path: ${FFPROBE_PATH:/usr/bin/ffprobe}
