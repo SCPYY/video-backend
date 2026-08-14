@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/auth/login").permitAll()
                         .requestMatchers("/api/v1/contents/**").permitAll()
                         .requestMatchers("/api/v1/episodes/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/interactive/contents/**", "/api/v1/interactive/scenes/**").permitAll()
                         .requestMatchers("/api/v1/products/**").permitAll()
                         // 本地图片/视频静态资源公开访问；上传接口仍由 /api/v1/admin/upload/** 的方法权限保护
                         .requestMatchers("/uploads/**").permitAll()

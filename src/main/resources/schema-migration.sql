@@ -305,3 +305,20 @@ CREATE TABLE IF NOT EXISTS wallet_transactions (
     INDEX idx_wallet_transaction_user_created (user_id, created_at),
     INDEX idx_wallet_transaction_related (related_type, related_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS interactive_progress (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY, user_id BIGINT NOT NULL, content_id BIGINT NOT NULL,
+    current_scene_id BIGINT, current_node_id BIGINT, last_option_id BIGINT,
+    progress_seconds INT NOT NULL DEFAULT 0, is_finished TINYINT NOT NULL DEFAULT 0,
+    ending_scene_id BIGINT, last_played_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_interactive_progress_user_content (user_id, content_id),
+    INDEX idx_interactive_progress_content (content_id, last_played_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS interactive_choices (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY, user_id BIGINT NOT NULL, content_id BIGINT NOT NULL,
+    scene_id BIGINT NOT NULL, node_id BIGINT NOT NULL, option_id BIGINT NOT NULL,
+    next_scene_id BIGINT, next_node_id BIGINT, video_position INT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_interactive_choice_user_content (user_id, content_id, created_at),
+    INDEX idx_interactive_choice_option (option_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
